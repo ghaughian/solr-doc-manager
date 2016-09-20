@@ -29,4 +29,5 @@ else:
     from unittest.case import SkipTest
 
 # Solr configuration used in the tests
-solr_url = unicode(os.environ.get('SOLR_URL', 'http://localhost:8983/solr'))
+solr_url = unicode(os.environ.get('SOLR_URL', 'http://localhost:8983/solr/collection1'))
+zookeeper_url = unicode(os.environ.get('ZOOKEEPER_URL', 'localhost:2181'))

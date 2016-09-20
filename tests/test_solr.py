@@ -21,7 +21,7 @@ import os
 import sys
 import time
 
-from pysolr import Solr, SolrError
+from pysolr import Solr, SolrError, SolrCloud, ZooKeeper
 
 from bson import SON
 from gridfs import GridFS
@@ -34,14 +34,18 @@ from mongo_connector.util import retry_until_ok
 sys.path[0:0] = [""]
 
 from mongo_connector.doc_managers.solr_doc_manager import DocManager
-from tests import unittest, solr_url
+from tests import unittest, solr_url, zookeeper_url
 
 
 class SolrTestCase(unittest.TestCase):
     @classmethod
-    def setUpClass(cls):
-        cls.solr_conn = Solr(solr_url)
-        cls.docman = DocManager(solr_url, auto_commit_interval=0)
+    def setUpClass(cls, _cloud_mode=False):
+        if _cloud_mode:
+            cls.solr_conn = SolrCloud(ZooKeeper(zookeeper_url))
+            cls.docman = DocManager(zookeeper_url, cloud_mode=True, auto_commit_interval=0)
+        else:
+            cls.solr_conn = Solr(solr_url)
+            cls.docman = DocManager(solr_url, auto_commit_interval=0)
 
     def _search(self, query):
         return self.docman._stream_search(query)
@@ -55,8 +59,8 @@ class TestSolr(SolrTestCase):
     """
 
     @classmethod
-    def setUpClass(cls):
-        SolrTestCase.setUpClass()
+    def setUpClass(cls, _cloud_mode=False):
+        super(TestSolr, cls).setUpClass(_cloud_mode=_cloud_mode)
         cls.repl_set = ReplicaSet().start()
         cls.conn = cls.repl_set.client()
 
@@ -379,6 +383,56 @@ class TestSolr(SolrTestCase):
         self.assertEqual(next(iter(results))["numbers.2"], "three")
         results = self.solr_conn.search("characters.2:Cookie\ Monster")
         self.assertEqual(len(results), 1)
+
+class TestSolrCloud(TestSolr):
+    """ Tests Solr Cloud
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        super(TestSolrCloud, cls).setUpClass(_cloud_mode=True)
+        cls.repl_set = ReplicaSet().start()
+        cls.conn = cls.repl_set.client()
+
+    @classmethod
+    def tearDownClass(cls):
+        super(TestSolrCloud, cls).tearDownClass()
+
+    def setUp(self):
+        super(TestSolrCloud, self).setUp()
+
+    def tearDown(self):
+        super(TestSolrCloud, self).tearDown()
+
+    def test_insert(self):
+        super(TestSolrCloud, self).test_insert()
+
+    def test_remove(self):
+        super(TestSolrCloud, self).test_remove()
+
+    def test_insert_file(self):
+        super(TestSolrCloud, self).test_insert_file()
+
+    def test_remove_file(self):
+        super(TestSolrCloud, self).test_remove_file()
+
+    def test_update(self):
+        super(TestSolrCloud, self).test_update()
+
+    def test_rollback(self):
+        super(TestSolrCloud, self).test_rollback()
+
+    def test_valid_fields(self):
+        super(TestSolrCloud, self).test_valid_fields()
+
+    def test_invalid_fields(self):
+        super(TestSolrCloud, self).test_invalid_fields()
+
+    def test_dynamic_fields(self):
+        super(TestSolrCloud, self).test_dynamic_fields()
+
+    def test_nested_fields(self):
+        super(TestSolrCloud, self).test_nested_fields()
 
 if __name__ == '__main__':
     unittest.main()

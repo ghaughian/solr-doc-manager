@@ -25,7 +25,7 @@ import logging
 import os
 import re
 
-from pysolr import Solr, SolrError
+from pysolr import Solr, SolrError, SolrCloud, ZooKeeper
 
 from mongo_connector import errors
 from mongo_connector.compat import u
@@ -60,11 +60,15 @@ class DocManager(DocManagerBase):
     """
 
     def __init__(self, url, auto_commit_interval=DEFAULT_COMMIT_INTERVAL,
-                 unique_key='_id', chunk_size=DEFAULT_MAX_BULK, **kwargs):
+                 unique_key='_id', chunk_size=DEFAULT_MAX_BULK, cloud_mode=False, **kwargs):
         """Verify Solr URL and establish a connection.
         """
         self.url = url
-        self.solr = Solr(url, **kwargs.get('clientOptions', {}))
+        self.cloud_mode = cloud_mode
+        if self.cloud_mode:
+            self.solr = SolrCloud(ZooKeeper(url), **kwargs.get('clientOptions', {}))
+        else:
+            self.solr = Solr(url, **kwargs.get('clientOptions', {}))
         self.unique_key = unique_key
         # pysolr does things in milliseconds
         if auto_commit_interval is not None:
